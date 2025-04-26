@@ -1,0 +1,168 @@
+# SignalR Bildirim Sistemi Entegrasyon Rehberi
+
+Bu rehber, ASP.NET Core MVC projenize gerçek zamanlý bildirim sistemi eklemek için gereken adýmlarý açýklamaktadýr.
+
+## 1. Dosya Yapýsý ve Yerleþimi
+
+Aþaðýdaki dosyalarý projenize eklemeniz gerekmektedir:
+
+### Backend Dosyalarý
+
+1. **`Hubs/NotificationHub.cs`** - SignalR hub sýnýfý
+2. **`Services/NotificationService.cs`** - Bildirim iþlemlerini yöneten servis
+3. **`Models/Notification.cs`** - Bildirim veri modeli (Entity Framework model sýnýfýnýzda zaten var)
+
+### Frontend Dosyalarý
+
+1. **`wwwroot/js/notification.js`** - SignalR JavaScript client
+2. **`wwwroot/sounds/notification.mp3`** - Bildirim ses dosyasý (herhangi bir .mp3 olabilir)
+3. **`Views/Shared/_NotificationsPartial.cshtml`** - Bildirim listesi partial view
+4. **`Views/Notification/Index.cshtml`** - Tüm bildirimlerin görüntülendiði sayfa
+
+### Temel Þablon Dosyalarý
+
+1. **`Views/Shared/_Layout.cshtml`** - Ana þablon dosyasý
+2. **`Views/_ViewImports.cshtml`** - View import direktifleri
+3. **`Views/_ViewStart.cshtml`** - View baþlangýç ayarlarý
+4. **`wwwroot/css/site.css`** - CSS stilleri
+5. **`wwwroot/js/site.js`** - Genel JavaScript fonksiyonlarý
+
+## 2. Paket Baðýmlýlýklarý
+
+Projenize aþaðýdaki NuGet paketlerini eklemelisiniz:
+
+```
+Microsoft.AspNetCore.SignalR.Core
+Microsoft.AspNetCore.SignalR.Client
+```
+
+## 3. Program.cs Konfigürasyonu
+
+`Program.cs` dosyanýzda aþaðýdaki servisleri ve middleware'leri eklemelisiniz:
+
+```csharp
+// Hizmetleri ekle
+builder.Services.AddSignalR();
+builder.Services.AddScoped<NotificationService>();
+
+// ...
+
+// Middleware'leri ekle
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// SignalR hub'ý eþleþtir
+app.MapHub<NotificationHub>("/notificationHub");
+```
+
+## 4. Veritabaný Entegrasyonu
+
+`ApplicationDbContext.cs` dosyanýzda `Notification` entity'sini ekleyin ve gerekli migration'larý oluþturun:
+
+```csharp
+public DbSet<Notification> Notifications { get; set; }
+```
+
+## 5. Layout Dosyasýna JavaScript Referanslarý
+
+Layout dosyanýzýn sonuna aþaðýdaki JavaScript referanslarýný ekleyin:
+
+```html
+<!-- SignalR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+<!-- Moment.js (bildirim zamanlarý için) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/tr.min.js"></script>
+<!-- Bildirim JavaScript -->
+<script src="~/js/notification.js"></script>
+```
+
+## 6. Controller'larda Kullaným
+
+Controller'larýnýzda bildirim göndermek için þu þekilde kullanabilirsiniz:
+
+```csharp
+// Controller içinde
+public async Task<IActionResult> ApproveTransaction(Guid id)
+{
+    // Ýþlem onaylandýktan sonra...
+    
+    // Maker kullanýcýsýna bildirim gönder
+    await _notificationService.CreateNotificationAsync(
+        transaction.CreatedById, // Maker kullanýcý ID'si
+        "Ýþlem Onaylandý",
+        $"{transaction.Amount:C} tutarýndaki iþleminiz onaylanmýþtýr.",
+        "Approval", // Bildirim tipi
+        $"/Transaction/Details/{transaction.Id}", // Yönlendirme URL'i
+        transaction.Id.ToString(), // Ýliþkili varlýk ID'si
+        "Transaction" // Ýliþkili varlýk tipi
+    );
+    
+    return RedirectToAction("Details", new { id });
+}
+```
+
+Bir role bildirim göndermek için:
+
+```csharp
+await _notificationService.CreateNotificationForRoleAsync(
+    "Checker", // Rol adý
+    "Yeni Ýþlem",
+    $"Onayýnýzý bekleyen yeni bir iþlem bulunmaktadýr.",
+    "PendingApproval",
+    "/Transaction/Index?filterId=3", // Onay bekleyen iþlemler listesi
+    null,
+    "Transaction"
+);
+```
+
+## 7. Projeyi Yapýlandýrma ve Çalýþtýrma
+
+1. Bu dosyalarý projenize ekledikten sonra
+2. Veritabaný migration'larýný oluþturun ve uygulayýn
+3. Projeyi build edin ve çalýþtýrýn
+
+## 8. Bildirim Tipleri
+
+Sistem þu bildirim tiplerini destekler:
+
+- **Approval**: Ýþlem onay bildirimleri (yeþil)
+- **Rejection**: Ýþlem red bildirimleri (kýrmýzý)
+- **PendingApproval**: Onay bekleyen iþlem bildirimleri (sarý)
+- Diðer tüm tipler için varsayýlan (mavi)
+
+## 9. Test Ýçin Örnek
+
+Controller'da bildirim testi yapmak için:
+
+```csharp
+[HttpGet]
+public async Task<IActionResult> TestNotification()
+{
+    var userId = _userManager.GetUserId(User);
+    
+    await _notificationService.CreateNotificationAsync(
+        userId,
+        "Test Bildirimi",
+        "Bu bir test bildirimidir.",
+        "Approval",
+        "/Home/Index"
+    );
+    
+    return RedirectToAction("Index", "Home");
+}
+```
+
+## Sorun Giderme
+
+1. **SignalR Baðlantý Sorunu**: JavaScript konsolunda hata mesajlarýný kontrol edin.
+2. **Bildirim Görünmüyor**: Kullanýcý giriþi yapýldýðýndan emin olun, bildirimlerin doðru kullanýcýya gönderildiðini kontrol edin.
+3. **Ses Çalmýyor**: `notification.mp3` dosyasýnýn doðru konumda olduðundan emin olun.
+4. **Veritabaný Hatalarý**: Migration'larý kontrol edin ve veritabanýnýn güncel olduðundan emin olun.
+
+## Özelleþtirme
+
+- Bildirim görünümünü özelleþtirmek için `_NotificationsPartial.cshtml` dosyasýný düzenleyin
+- Bildirim davranýþýný deðiþtirmek için `notification.js` dosyasýný düzenleyin
+- Farklý bildirim tipleri eklemek için JavaScript ve CSS dosyalarýnda ilgili yerleri güncelleyin

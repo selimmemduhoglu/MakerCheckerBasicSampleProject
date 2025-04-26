@@ -1,0 +1,53 @@
+﻿@using static MakerCheckerBasicSampleProject.Models.ApplicationUser
+@model List<Notification>
+
+@if (Model != null && Model.Any())
+{
+    foreach (var notification in Model)
+    {
+        string iconClass = "";
+        string borderClass = "";
+
+        switch (notification.Type)
+        {
+            case "Approval":
+                iconClass = "fa-check-circle text-success";
+                borderClass = "border-start border-success";
+                break;
+            case "Rejection":
+                iconClass = "fa-times-circle text-danger";
+                borderClass = "border-start border-danger";
+                break;
+            case "PendingApproval":
+                iconClass = "fa-clock text-warning";
+                borderClass = "border-start border-warning";
+                break;
+            default:
+                iconClass = "fa-info-circle text-info";
+                borderClass = "border-start border-info";
+                break;
+        }
+
+        <li class="notification-item" data-notification-id="@notification.Id">
+            <div class="d-flex p-2 @borderClass">
+                <div class="ms-2">
+                    <i class="fas @iconClass me-2"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">@notification.Title</h6>
+                    <p class="mb-1 small">@notification.Message</p>
+                    <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</small>
+                </div>
+                <div class="ms-auto">
+                    <button class="btn btn-sm btn-link text-muted mark-as-read" data-notification-id="@notification.Id">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+        </li>
+    }
+}
+else
+{
+    <li class="dropdown-item text-center text-muted">Okunmamış bildirim yok</li>
+}

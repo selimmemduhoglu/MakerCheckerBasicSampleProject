@@ -1,0 +1,166 @@
+flowchart TD
+    %% Ana akýþ
+    Start([Baþlangýç]) --> UserLogin[Kullanýcý Giriþi\nASP.NET Core Identity]
+    UserLogin --> CheckRole{Kullanýcý Rolü?}
+    
+    %% Maker rolü akýþý
+    CheckRole -->|Maker| MakerDashboard[Maker Dashboard]
+    MakerDashboard --> CreateTx[Ýþlem Oluþturma Formu]
+    CreateTx --> SelectWorkflow[Ýþ Akýþý Seçimi\n1. Standart Onay\n2. Çok Seviyeli Onay]
+    SelectWorkflow --> SubmitTx[Ýþlem Gönder]
+    SubmitTx --> SaveTxDB[(Veritabanýna Kaydet)]
+    SaveTxDB --> LogAction[Ýþlem Logla]
+    LogAction --> NotifyCheckers[Checker'lara Bildirim Gönder\nSignalR]
+    NotifyCheckers --> WaitForApproval[Onay Bekle]
+    
+    %% Checker rolü akýþý
+    CheckRole -->|Checker| CheckerDashboard[Checker Dashboard]
+    CheckerDashboard --> PendingApprovals[Onay Bekleyen Ýþlemler]
+    PendingApprovals --> SelectTx[Ýþlem Seçimi]
+    SelectTx --> ReviewTx[Ýþlem Ýnceleme]
+    ReviewTx --> ApproveReject{Onay/Red?}
+    
+    %% Onay akýþý
+    ApproveReject -->|Onayla| CheckWorkflow{Ýþ Akýþý Tipi?}
+    CheckWorkflow -->|Standart| StandardApprove[Ýþlemi Onayla]
+    CheckWorkflow -->|Çok Seviyeli| CheckLevel{Onay Seviyesi?}
+    
+    CheckLevel -->|Son Seviye Deðil| PartialApprove[Kýsmi Onay Ver]
+    PartialApprove --> UpdateTxState1[Ýþlem Durumunu Güncelle:\nPartiallyApproved]
+    UpdateTxState1 --> NotifyNextLevel[Sonraki Seviye Onaylayýcýlarýna Bildirim]
+    NotifyNextLevel --> WaitForApproval
+    
+    CheckLevel -->|Son Seviye| FinalApprove[Son Onay Ver]
+    FinalApprove --> StandardApprove
+    
+    StandardApprove --> UpdateTxState2[Ýþlem Durumunu Güncelle:\nApproved]
+    UpdateTxState2 --> LogApproval[Onay Ýþlemini Logla]
+    LogApproval --> NotifyMaker[Maker'a Bildirim Gönder]
+    NotifyMaker --> End1([Ýþlem Tamamlandý])
+    
+    %% Red akýþý
+    ApproveReject -->|Reddet| RejectReason[Red Nedeni Gir]
+    RejectReason --> RejectTx[Ýþlemi Reddet]
+    RejectTx --> UpdateTxState3[Ýþlem Durumunu Güncelle:\nRejected]
+    UpdateTxState3 --> LogRejection[Red Ýþlemini Logla]
+    LogRejection --> NotifyMakerRejection[Maker'a Red Bildirimi Gönder]
+    NotifyMakerRejection --> End2([Ýþlem Reddedildi])
+    
+    %% SupervisorChecker rolü akýþý
+    CheckRole -->|SupervisorChecker| SupervisorDashboard[Supervisor Dashboard]
+    SupervisorDashboard --> SupervisorApprovals[Supervisor Onayý Bekleyen Ýþlemler]
+    SupervisorApprovals --> SelectTx
+    
+    %% Admin rolü akýþý
+    CheckRole -->|Admin| AdminDashboard[Admin Dashboard]
+    AdminDashboard --> ManageUsers[Kullanýcý Yönetimi]
+    AdminDashboard --> ManageRoles[Rol Yönetimi]
+    AdminDashboard --> ManageWorkflows[Ýþ Akýþý Yönetimi]
+    AdminDashboard --> ViewAllTx[Tüm Ýþlemleri Görüntüle]
+    ViewAllTx --> FilterTx[Ýþlem Filtrele]
+    FilterTx --> SelectTx
+    
+    %% Bildirim akýþý
+    subgraph "Bildirim Sistemi (SignalR)"
+        SendNotification[Bildirim Gönder]
+        ReceiveNotification[Bildirim Al]
+        MarkAsRead[Okundu Olarak Ýþaretle]
+    end
+    
+    %% Veritabaný iþlemleri
+    subgraph "Veritabaný Ýþlemleri (Entity Framework)"
+        SaveTransaction[Ýþlem Kaydet]
+        SaveLog[Log Kaydet]
+        UpdateState[Durum Güncelle]
+        SaveApproval[Onay Kaydet]
+    end
+    
+    %% Rol ve izin kontrolleri
+    subgraph "Yetkilendirme Sistemi"
+        CheckPermission{Ýzin Kontrolü}
+        EnforceRules[Kural Denetimi]
+        PreventSelfApproval[Kendi Ýþlemini Onaylama Engelleme]
+    end
+
+    %% Ýliþkiler
+    ReviewTx --> CheckPermission
+    ReviewTx --> PreventSelfApproval
+    SubmitTx --> SaveTransaction
+    LogAction --> SaveLog
+    StandardApprove --> SaveApproval
+    PartialApprove --> SaveApproval
+    RejectTx --> UpdateState
+
+    style Start fill:#f9f,stroke:#333,stroke-width:2px
+    style End1 fill:#cf9,stroke:#333,stroke-width:2px
+    style End2 fill:#cf9,stroke:#333,stroke-width:2px
+    style MakerDashboard fill:#bbf,stroke:#333,stroke-width:1px
+    style CheckerDashboard fill:#bbf,stroke:#333,stroke-width:1px
+    style SupervisorDashboard fill:#bbf,stroke:#333,stroke-width:1px
+    style AdminDashboard fill:#bbf,stroke:#333,stroke-width:1px
+
+
+
+
+Maker-Checker Sistemi Ýþlem Akýþý Açýklamasý
+Yukarýdaki diyagram, geliþtirdiðimiz Maker-Checker sisteminin temel iþlem akýþýný göstermektedir. Ýþte bu akýþýn adým adým açýklamasý:
+1. Kullanýcý Giriþi ve Rol Belirleme
+
+Kullanýcý sisteme ASP.NET Core Identity ile giriþ yapar
+Sistem otomatik olarak kullanýcýnýn rolünü belirler: Maker, Checker, SupervisorChecker veya Admin
+
+2. Maker Rolü Ýþlem Akýþý
+
+Maker Dashboard: Maker rolüne sahip kullanýcýlar iþlem oluþturma yetkisine sahiptir
+Ýþlem Oluþturma: Maker yeni bir iþlem oluþturur
+Ýþ Akýþý Seçimi: Standart onay veya çok seviyeli onay iþ akýþýný seçebilir
+Ýþlem Gönderimi: Veritabanýna kaydedilir ve loglanýr
+Bildirim: SignalR ile ilgili Checker'lara bildirim gönderilir
+
+3. Checker Rolü Ýþlem Akýþý
+
+Checker Dashboard: Onay bekleyen iþlemleri görüntüler
+Ýþlem Ýnceleme: Detaylarý inceler
+Karar Verme: Ýþlemi onaylayabilir veya reddedebilir
+Standart Onay: Ýþlemi doðrudan onaylar
+Çok Seviyeli Onay: Onay seviyesine göre iþler
+
+Ýlk seviye onayý verildiðinde iþlem durumu "PartiallyApproved" olarak güncellenir
+Sonraki seviye onaylayýcýlarýna bildirim gönderilir
+
+
+Red Ýþlemi: Red nedeni girerek iþlemi reddeder
+
+4. SupervisorChecker Rolü Ýþlem Akýþý
+
+Supervisor Dashboard: Kendi onay seviyesine gelmiþ iþlemleri görüntüler
+Ýþlem Ýnceleme ve Onay/Red: Checker ile benzer þekilde iþlemi onaylar veya reddeder
+Son Onay: Çok seviyeli süreçte son onayý verme yetkisine sahiptir
+
+5. Admin Rolü Ýþlem Akýþý
+
+Admin Dashboard: Tüm sistem yönetimi
+Kullanýcý Yönetimi: Kullanýcýlarý ekleme, düzenleme, devre dýþý býrakma
+Rol Yönetimi: Rol ve izinlerin yönetimi
+Ýþ Akýþý Yönetimi: Onay iþ akýþlarýnýn oluþturulmasý ve düzenlenmesi
+Tüm Ýþlemleri Görüntüleme: Filtreleme ve detaylý inceleme
+
+6. Bildirim Sistemi (SignalR)
+
+Bildirim Gönderme: Ýþlem durumlarý deðiþtiðinde ilgili kullanýcýlara bildirim gönderilir
+Bildirim Alma: Kullanýcýlar anlýk olarak bildirimleri alýr
+Okundu Ýþaretleme: Kullanýcýlar bildirimleri okundu olarak iþaretleyebilir
+
+7. Veritabaný Ýþlemleri (Entity Framework)
+
+Ýþlem Kaydetme: Tüm iþlemler ve onaylar veritabanýna kaydedilir
+Log Tutma: Tüm eylemlerin detaylý loglarý tutulur
+Durum Güncelleme: Ýþlem durumlarý (Pending, Approved, Rejected vb.) güncellenir
+
+8. Yetkilendirme Sistemi
+
+Ýzin Kontrolü: Kullanýcýlarýn yetkileri sürekli kontrol edilir
+Kural Denetimi: Ýþ kurallarý (örneðin, kendi iþlemini onaylayamama) uygulanýr
+Rol Tabanlý Eriþim: Her kullanýcý sadece kendi rolüne uygun ekranlara eriþebilir
+
+Bu iþlem akýþý, finansal iþlemlerde gerekli olan "dört göz prensibi"ni (four-eyes principle) saðlamakta ve bunu çok seviyeli onay, anlýk bildirim ve detaylý loglama ile güçlendirmektedir.

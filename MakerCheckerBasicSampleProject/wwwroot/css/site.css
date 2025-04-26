@@ -1,0 +1,137 @@
+﻿/* Site geneli stil */
+
+/* Genel sayfa düzeni */
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px; /* Footer yüksekliği */
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 60px; /* Footer yüksekliği */
+    line-height: 60px; /* Footer içeriğini dikey olarak ortala */
+}
+
+/* Bildirim sistemine özel stiller */
+
+/* Bildirim badge'i */
+#notificationBadge {
+    font-size: 0.6rem;
+    top: 0.5rem;
+    right: 0.1rem;
+}
+
+/* Bildirim listesi */
+#notificationList {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    transition: background-color 0.3s;
+    cursor: pointer;
+}
+
+    .notification-item:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+
+/* Bildirim türlerine göre kenarlık renkleri */
+.border-left {
+    border-left-width: 3px !important;
+}
+
+/* Bağlantı durumu göstergesi */
+#connectionStatus {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Toast bildirimleri */
+.toast-container {
+    z-index: 1070;
+}
+
+.toast {
+    min-width: 300px;
+}
+
+.toast-header .btn-close {
+    font-size: 0.75rem;
+    margin-left: auto;
+}
+
+/* Dashboard kartları */
+.border-left-primary {
+    border-left: 4px solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 4px solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 4px solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 4px solid #f6c23e !important;
+}
+
+.border-left-danger {
+    border-left: 4px solid #e74a3b !important;
+}
+
+/* Card özellikleri */
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+}
+
+.card-footer {
+    background-color: #f8f9fc;
+    border-top: 1px solid #e3e6f0;
+}
+
+/* Durum badge'leri */
+.badge {
+    padding: 0.4em 0.65em;
+}
+
+/* Form elemanları */
+.form-label {
+    font-weight: 500;
+}
+
+/* Genel yazı tipi boyutları */
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-lg {
+    font-size: 1.2rem;
+}
+
+/* Tablo stilleri */
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fc;
+}
+
+/* Mobil görünüm düzenlemeleri */
+@media (max-width: 767.98px) {
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
