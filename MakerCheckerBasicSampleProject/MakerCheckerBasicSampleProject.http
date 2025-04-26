@@ -1,0 +1,6 @@
+@MakerCheckerBasicSampleProject_HostAddress = http://localhost:5220
+
+GET {{MakerCheckerBasicSampleProject_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
